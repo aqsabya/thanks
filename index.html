@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hi, Click the Envelope yaa!</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #f7f1e8;
+      --paper: #fffdf8;
+      --ink: #443a35;
+      --muted: #806f66;
+      --envelope: #c9a99b;
+      --envelope-light: #d7b9ad;
+      --envelope-dark: #ad897b;
+      --line: rgba(68, 58, 53, 0.17);
+      --shadow: rgba(72, 52, 44, 0.17);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255,255,255,.72), transparent 40%),
+        var(--bg);
+      color: var(--ink);
+      font-family: "Cormorant Garamond", Georgia, serif;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image: radial-gradient(rgba(68,58,53,.12) .55px, transparent .55px);
+      background-size: 5px 5px;
+      z-index: 100;
+    }
+
+    body.letter-open {
+      background:
+        radial-gradient(circle at 50% 20%, rgba(255,255,255,.75), transparent 42%),
+        #eee5d9;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 46px 22px;
+      position: relative;
+      transition: padding .8s ease;
+    }
+
+    .title {
+      margin: 0 0 52px;
+      font-family: "Playfair Display", Georgia, serif;
+      font-size: clamp(31px, 5vw, 48px);
+      font-weight: 500;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      text-align: center;
+      color: var(--ink);
+      transition: opacity .5s ease, transform .5s ease;
+      position: relative;
+      z-index: 10;
+    }
+
+    .title.hidden {
+      opacity: 0;
+      transform: translateY(-16px);
+      pointer-events: none;
+    }
+
+    /* =========================================================
+       ENVELOPE SCENE
+       ========================================================= */
+
+    .scene {
+      width: min(94vw, 680px);
+      height: 460px;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      perspective: 1600px;
+      transition: opacity .7s ease, transform .7s ease;
+    }
+
+    .envelope-wrap {
+      width: min(82vw, 500px);
+      aspect-ratio: 1.58 / 1;
+      position: relative;
+      margin-top: 24px;
+      cursor: pointer;
+      filter: drop-shadow(0 22px 28px var(--shadow));
+      transition: transform .65s cubic-bezier(.2,.75,.2,1), opacity .65s ease;
+      z-index: 20;
+    }
+
+    .envelope-wrap:hover {
+      transform: translateY(-7px);
+    }
+
+    .envelope-wrap:focus-visible {
+      outline: 2px solid var(--envelope-dark);
+      outline-offset: 10px;
+      border-radius: 5px;
+    }
+
+    .envelope-wrap.opening,
+    .envelope-wrap.opening:hover {
+      transform: translateY(0);
+      cursor: default;
+    }
+
+    .envelope {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* The actual back of the envelope. */
+    .envelope-back {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(145deg, var(--envelope-light), var(--envelope));
+      border-radius: 6px;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .envelope-back::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 6px;
+    }
+
+    /*
+      The pocket is a real front panel. This is the important
+      layering fix: the paper sits BEHIND this panel, so only
+      the intended amount can peek out.
+    */
+    .envelope-pocket {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: 0;
+      z-index: 8;
+      overflow: hidden;
+      border-radius: 0 0 6px 6px;
+      background:
+        linear-gradient(
+          145deg,
+          rgba(215,185,173,.98),
+          rgba(195,158,143,.98)
+        );
+      clip-path: polygon(
+        0 0,
+        50% 52%,
+        100% 0,
+        100% 100%,
+        0 100%
+      );
+    }
+
+    .envelope-pocket::before {
+      content: none;
+    }
+
+    .envelope-pocket::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.15);
+    }
+
+    /* Letter is behind the pocket and starts completely hidden. */
+    .peek-letter {
+      position: absolute;
+      z-index: 3;
+      left: 14%;
+      width: 72%;
+      height: 68%;
+      bottom: 6%;
+      background: var(--paper);
+      border-radius: 2px;
+      box-shadow: 0 8px 18px rgba(67,48,40,.13);
+      overflow: hidden;
+      opacity: 0;
+      transition:
+        bottom 1.15s cubic-bezier(.18,.78,.18,1),
+        transform 1.15s cubic-bezier(.18,.78,.18,1),
+        opacity .2s ease;
+      pointer-events: none;
+    }
+
+    .peek-letter::before {
+      content: "";
+      position: absolute;
+      inset: 25px 30px;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0 16px,
+        var(--line) 16px 17px
+      );
+    }
+
+    /* Side folds sit above the paper but below the flap. */
+    .envelope-left-fold,
+    .envelope-right-fold {
+      position: absolute;
+      inset: 0;
+      z-index: 9;
+      pointer-events: none;
+    }
+
+    .envelope-left-fold {
+      background: rgba(255,255,255,.07);
+      clip-path: polygon(0 0, 50% 52%, 0 100%);
+    }
+
+    .envelope-right-fold {
+      background: rgba(120,80,68,.07);
+      clip-path: polygon(100% 0, 50% 52%, 100% 100%);
+    }
+
+    /*
+      Flap is on top of everything. It opens upward first.
+    */
+    .flap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 61%;
+      z-index: 12;
+      background:
+        linear-gradient(150deg, #d8b9ac, #c39f91);
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+      transform-origin: 50% 0%;
+      transform: perspective(900px) rotateX(0deg);
+      transition: transform 1.05s cubic-bezier(.2,.72,.18,1);
+      backface-visibility: hidden;
+      filter: drop-shadow(0 2px 2px rgba(74,50,42,.10));
+    }
+
+    .flap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 48%,
+        rgba(255,255,255,.16) 50%,
+        transparent 52%
+      );
+    }
+
+    .envelope-wrap.opening .flap {
+      transform: perspective(900px) rotateX(178deg);
+    }
+
+    /*
+      On click 1, the letter rises only enough to be visible,
+      while the pocket still covers its lower portion.
+    */
+    .envelope-wrap.opening .peek-letter {
+      bottom: 28%;
+      opacity: 1;
+      transform: translateY(-1px);
+      transition:
+        bottom 1.15s cubic-bezier(.18,.78,.18,1),
+        transform 1.15s cubic-bezier(.18,.78,.18,1),
+        opacity .3s ease .25s;
+    }
+
+    .envelope-wrap.ready {
+      cursor: pointer;
+    }
+
+    .envelope-wrap.ready:hover {
+      transform: translateY(-4px) scale(1.008);
+    }
+
+    /* =========================================================
+       FULL PHYSICAL LETTER
+       ========================================================= */
+
+    .letter-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 8vh 20px 10vh;
+      opacity: 0;
+      pointer-events: none;
+      perspective: 1800px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      transition: opacity .45s ease;
+    }
+
+    .letter-stage.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .paper {
+      width: min(88vw, 760px);
+      min-height: 980px;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(255,255,255,.75), transparent 25%),
+        linear-gradient(105deg, rgba(255,255,255,.35), transparent 22%, rgba(236,222,204,.12) 70%, transparent),
+        var(--paper);
+      box-shadow:
+        0 32px 80px rgba(66,49,42,.20),
+        0 4px 12px rgba(66,49,42,.10);
+      position: relative;
+      transform-origin: 50% 0%;
+      transform: rotateX(-82deg) translateY(35px) scale(.94);
+      opacity: 0;
+      transition:
+        transform 1.15s cubic-bezier(.18,.78,.18,1),
+        opacity .8s ease;
+      padding: clamp(58px, 7vw, 86px) clamp(38px, 8vw, 88px) 72px;
+      border-radius: 1px;
+    }
+
+    .letter-stage.visible .paper {
+      transform: rotateX(0deg) translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .paper::before {
+      content: "";
+      position: absolute;
+      inset: 16px;
+      border: 1px solid rgba(128,111,102,.12);
+      pointer-events: none;
+    }
+
+    .paper::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .25;
+      background-image: radial-gradient(rgba(68,58,53,.08) .5px, transparent .5px);
+      background-size: 4px 4px;
+      mix-blend-mode: multiply;
+    }
+
+    .paper-content {
+      position: relative;
+      z-index: 2;
+    }
+
+    .letter-header {
+      font-family: "Playfair Display", Georgia, serif;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.25;
+      margin: 0 0 38px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    .letter-body {
+      font-size: clamp(18px, 2.1vw, 21px);
+      line-height: 1.78;
+      font-weight: 400;
+      letter-spacing: .005em;
+      color: #51453f;
+      text-align: justify;
+    }
+
+    .letter-body p {
+      margin: 0 0 28px;
+    }
+
+    .letter-body .signature {
+      margin-top: 38px;
+      margin-bottom: 0;
+      line-height: 1.5;
+      text-align: left;
+    }
+
+    .signature-name {
+      font-family: "Playfair Display", Georgia, serif;
+      font-size: 1.08em;
+    }
+
+    .back-button {
+      display: block;
+      margin: 48px auto 0;
+      border: 1px solid rgba(128,111,102,.35);
+      background: rgba(255,253,248,.72);
+      color: #806f66;
+      font-family: "Playfair Display", Georgia, serif;
+      font-size: 14px;
+      letter-spacing: .02em;
+      padding: 10px 20px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform .25s ease, background .25s ease, color .25s ease;
+    }
+
+    .back-button:hover {
+      transform: translateY(-2px);
+      background: rgba(255,253,248,.96);
+      color: var(--ink);
+    }
+
+    .back-button:focus-visible {
+      outline: 2px solid var(--envelope-dark);
+      outline-offset: 4px;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 700px) {
+      .page {
+        padding: 32px 14px;
+      }
+
+      .title {
+        margin-bottom: 28px;
+      }
+
+      .scene {
+        height: 340px;
+      }
+
+      .envelope-wrap {
+        width: min(88vw, 430px);
+        margin-top: 18px;
+      }
+
+      .peek-letter {
+        left: 14%;
+        width: 72%;
+        height: 68%;
+        bottom: 6%;
+      }
+
+      .envelope-wrap.opening .peek-letter {
+        bottom: 28%;
+      }
+
+      .letter-stage {
+        padding: 3vh 10px 7vh;
+      }
+
+      .paper {
+        width: 94vw;
+        min-height: 900px;
+        padding: 48px 27px 58px;
+      }
+
+      .paper::before {
+        inset: 9px;
+      }
+
+      .letter-body {
+        font-size: 17px;
+        line-height: 1.72;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+
+    <h1 class="title" id="pageTitle">Hi, please click on the envelope yaa!</h1>
+
+    <section class="scene" id="scene" aria-label="A special letter">
+
+      <div
+        class="envelope-wrap"
+        id="envelope"
+        role="button"
+        tabindex="0"
+        aria-label="Open the envelope"
+      >
+        <div class="envelope">
+
+          <div class="envelope-back"></div>
+
+          <!-- Letter is physically behind the front pocket -->
+          <div class="peek-letter" aria-hidden="true"></div>
+
+          <!-- Real front pocket: hides the lower part of the letter -->
+          <div class="envelope-pocket"></div>
+
+          <div class="envelope-left-fold"></div>
+          <div class="envelope-right-fold"></div>
+
+          <!-- Top flap opens on the first click -->
+          <div class="flap"></div>
+
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Full letter is a page-like physical sheet, not a scrollable card -->
+  <section class="letter-stage" id="letterStage" aria-label="Letter">
+    <article class="paper">
+
+      <div class="paper-content">
+
+        <h2 class="letter-header">HI TO MY FAVORITE PERSON!</h2>
+
+        <div class="letter-body">
+
+          <p>
+            First of all, I just want to say thank you from the deepest part of my heart (lebay) for spending ur time with me semalem. Makan pizza, carpool jadi-jadian, keliling scbd, especially the part where kita ngobrol banyak about each other. ACTUALLY GW TUH UDAH NYIAPIN BEBERAPA HAL JUGA YANG GW MAU SAMPEIN BUT I GUESS UR WAY MORE BRAVER THAN ME WHEN IT COMES TO THIS, maafin gw ya kalo jadinya lu banyak memulai dan nanya-nanya lebih dulu daripada gw (but I hope all my answers bisa memuaskan dan ngebuat lu lebih tau tentang diri gw), soalnya I feel like it’s a thing yang harusnya cowo bisa lakuin duluan but I gotta admit emang gw beneran se gengsi itu kalo mau ngomong langsungg, especially hal-hal kaya gini, padahal gw duluan yang demen HAHA (lowkey feel like a loser maaf). But again thanks yaa aii udahh mau override rasa malu lu akhirnya we both can express and talk about several things together before we step further into this relationship
+          </p>
+
+          <p>
+            JUJUR GW BENERAN YANG SE LEGA DAN SE HAPPY ITU after kita ngobrol-ngobrol banyak semalem, gw beneran happy karena akhirnya we both can know each of our personality and perspective on a better level. So, gw juga berharap ke depannya kita bisa lebih banyak ngobrol-ngobrol tentang hal kaya gini, can understand each other better, and keep everything communicated even a small things yaaaa, especially kalo ada yang mau diceritain apapun ituu, I know ini masih jadi hal yang I’m currently still working on, tapi after semalem ngobrol berdua &amp; gw ngobrol sama diri gw sendiri menjelang tidur, I trust you 587%, you’re my comfort person, gw bakal lebih open ke lu when it comes to everything and I hope kita bisa saling melengkapi satu sama lain jugaaaaa yaaaa
+          </p>
+
+          <p>
+            INI GW MAU NAMBAHIN DIKIT AJA SOALNYA KAYA BEBERAPA GA KESAMPEAN SEMALEM. Sebenernya ada beberapa hal juga yang pengen gw tambahin terutama alesan-alesan yang bikin gw (makin) suka sama lu (MAAF KALO MENJIJIKAN DAN GA DISAMPEIN SEMALEM BENERAN SE GENGSI &amp; MALU ITU HEHE 😂) Satu, pas kita jadi mentor I really feel kalo gw ngelakuinnya ngga satu arah gituuu, sebenernya gw udah bilang jugaa, tapi the way you give back your effort in mentoring beneran buat gw APA YA BAHASANYA tapi intinya gw makin….. Fall in love? AWOKAOWKAOWKOAWKO YA POKOKNYA GITU LAH. Dua, you always remember small things yang gw ceritain and at a random point kadang-kadang suka lu bahas ulang hehehehe, I really feel happy and appreciated everytime you done that, terus juga lu ngelakuinnya beneran yang kaya banyak banget ga cuma sekali dua kali and it always make me feel happy hihi. Ketiga, gw juga gatau kenapa setiap ketemu ada energi semangat aja yang muncul di gw, yaudah kaya happiness dalam diri gw meningkat aja gitu loh, so that’s why gw belakangan ini banyak banget ngajak ketemu, nganter, makan, dll karena emang genuinely gw jadi semangat ajaaaa hehehehhehe makasih ya aii. Keempat, lu selalu mengiyakan ajakan makan gw. Kelima, ini bidadari dari mana cuk cakep banget gakuat 😂. ANDD ACTUALLY THERE’S SO MANYY MOREEEE, GA MUNGKIN CUMA ADA 5 HAL YANG BUAT GW SUKA SAMA LU TAPI INTINYA I ALWAYS FEEL THAT YOU’RE THE ONE FOR ME 🫰
+          </p>
+
+          <p>
+            Again makasih yaaa aii for accepting me, express ur feelings, and many more things we have done together. I hope we can build this up together and kalo misalkan ada hal yang sekiranya jadi burden di hati lu atau lu merasa ada yang kurang jelas gw sampeinnya, please banget bilang ke gw, gw juga gamau kita sama-sama keep things up to ourselves yang akhirnya buat kita overthink about each other. THAT’S ALL I GUESS, MAKASIH YAAAA AIDARINI MUTHMAINAH &lt;3
+          </p>
+
+          <p class="signature">
+            Sincerely,<br>
+            <span class="signature-name">Aqsa</span>
+          </p>
+
+          <button class="back-button" id="backButton" type="button">
+            ← back to the envelope
+          </button>
+
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <script>
+    const envelope = document.getElementById("envelope");
+    const letterStage = document.getElementById("letterStage");
+    const title = document.getElementById("pageTitle");
+    const backButton = document.getElementById("backButton");
+
+    let envelopeOpened = false;
+    let letterOpened = false;
+
+    /*
+      CLICK 1
+      Open only the flap and reveal a small, lined piece of paper.
+    */
+    function openEnvelope() {
+      if (envelopeOpened) return;
+
+      envelopeOpened = true;
+      envelope.classList.add("opening");
+
+      setTimeout(() => {
+        envelope.classList.add("ready");
+        envelope.setAttribute("aria-label", "Open the letter");
+      }, 900);
+    }
+
+    /*
+      CLICK 2
+      The small paper disappears into the transition and a
+      separate physical sheet unfolds toward the viewer.
+    */
+    function openLetter() {
+      if (!envelopeOpened || letterOpened) return;
+
+      letterOpened = true;
+      document.body.classList.add("letter-open");
+      title.classList.add("hidden");
+
+      envelope.style.opacity = "0";
+      envelope.style.transform = "translateY(18px) scale(.96)";
+
+      setTimeout(() => {
+        letterStage.classList.add("visible");
+        letterStage.scrollTop = 0;
+      }, 300);
+
+      setTimeout(() => {
+        envelope.style.visibility = "hidden";
+      }, 900);
+    }
+
+    function closeLetter() {
+      if (!letterOpened) return;
+
+      letterStage.classList.remove("visible");
+
+      setTimeout(() => {
+        envelope.style.visibility = "visible";
+        envelope.style.opacity = "";
+        envelope.style.transform = "";
+
+        envelope.classList.remove("ready");
+        envelope.classList.remove("opening");
+
+        title.classList.remove("hidden");
+        document.body.classList.remove("letter-open");
+
+        letterOpened = false;
+        envelopeOpened = false;
+        envelope.setAttribute("aria-label", "Open the envelope");
+      }, 700);
+    }
+
+    envelope.addEventListener("click", () => {
+      if (!envelopeOpened) {
+        openEnvelope();
+      } else if (!letterOpened) {
+        openLetter();
+      }
+    });
+
+    envelope.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+
+      event.preventDefault();
+
+      if (!envelopeOpened) {
+        openEnvelope();
+      } else if (!letterOpened) {
+        openLetter();
+      }
+    });
+
+    backButton.addEventListener("click", closeLetter);
+
+    /*
+      ESC is a quiet alternative for desktop users.
+      It does not interfere with the intended button interaction.
+    */
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && letterOpened) {
+        closeLetter();
+      }
+    });
+  </script>
+</body>
+</html>
